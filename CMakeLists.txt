@@ -18,29 +18,45 @@ set(VITA_VERSION  "00.01")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-include_directories(
-  ../common
-)
+set(SDL2_INCLUDE_DIR "$ENV{VITASDK}/arm-vita-eabi/include/SDL2")
+
+include_directories(${SDL2_INCLUDE_DIR})
 
 add_executable(${PROJECT_NAME}
   src/main.cpp
-  src/vector.cpp
+
+  src/board.cpp
   src/individual.cpp
+  src/vector.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
+  FLAC
   SDL2
-  SceDisplay_stub
-  SceCtrl_stub
-  SceAudio_stub
-  SceSysmodule_stub
-  SceGxm_stub
-  SceCommonDialog_stub
+  SDL2_image
+  SDL2_mixer
+  SDL2_ttf
   SceAppMgr_stub
-  SceTouch_stub
+  SceAppUtil_stub
+  SceAudio_stub
+  SceCommonDialog_stub
+  SceCtrl_stub
+  SceDisplay_stub
+  SceGxm_stub
   SceHid_stub
   SceMotion_stub
+  SceSysmodule_stub
+  SceTouch_stub
+  freetype
+  jpeg
   m
+  mikmod
+  mpg123
+  ogg
+  png16
+  vorbis
+  vorbisfile
+  z
 )
 
 vita_create_self(eboot.bin ${PROJECT_NAME})
@@ -51,6 +67,7 @@ vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} eboot.bin
   FILE sce_sys/livearea/contents/bg.png sce_sys/livearea/contents/bg.png
   FILE sce_sys/livearea/contents/startup.png sce_sys/livearea/contents/startup.png
   FILE sce_sys/livearea/contents/template.xml sce_sys/livearea/contents/template.xml
+  FILE resources resources
 )
 
 add_custom_target(send

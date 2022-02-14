@@ -18,6 +18,18 @@ Vector2 Vector2::operator-(const Vector2 &rhs) const {
   return Vector2(this->x - rhs.x, this->y - rhs.y);
 };
 
+Vector2 &Vector2::operator+=(const Vector2 &rhs) {
+  x += rhs.x;
+  y += rhs.y;
+  return *this;
+};
+
+Vector2 &Vector2::operator-=(const Vector2 &rhs) {
+  x -= rhs.x;
+  y -= rhs.y;
+  return *this;
+};
+
 Vector2 Vector2::operator*(const float &rhs) const {
   return Vector2(this->x * rhs, this->y * rhs);
 };
@@ -25,3 +37,21 @@ Vector2 Vector2::operator*(const float &rhs) const {
 Vector2 Vector2::operator/(const float &rhs) const {
   return Vector2(this->x / rhs, this->y / rhs);
 };
+
+Vector2 &Vector2::operator*=(const float &rhs) {
+  x *= rhs;
+  y *= rhs;
+  return *this;
+};
+
+Vector2 &Vector2::operator/=(const float &rhs) {
+  x /= rhs;
+  y /= rhs;
+  return *this;
+};
+
+float Vector2::norm() const { return std::sqrt(x * x + y * y); };
+
+float Vector2::norm_squared() const { return x * x + y * y; };
+
+float Vector2::angle() const { return std::atan2(y, x); };

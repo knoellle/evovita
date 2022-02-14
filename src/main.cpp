@@ -1,13 +1,18 @@
-#include <SDL2/SDL_gamecontroller.h>
-#include <SDL2/SDL_joystick.h>
-#include <SDL2/SDL_render.h>
-#include <SDL2/SDL_timer.h>
+#include <SDL2/SDL_surface.h>
+#include <SDL2/SDL_ttf.h>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <math.h>
 #include <vector>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_gamecontroller.h>
+#include <SDL2/SDL_joystick.h>
+#include <SDL2/SDL_render.h>
+#include <SDL2/SDL_timer.h>
+#include <SDL_ttf.h>
 #include <psp2/appmgr.h>
 #include <psp2/kernel/clib.h>
 #include <psp2/kernel/processmgr.h>
@@ -15,10 +20,11 @@
 #include <psp2/net/netctl.h>
 #include <psp2/sysmodule.h>
 
+#include "board.hpp"
 #include "individual.hpp"
+#include "utils.hpp"
 #include "vector.hpp"
 
-#define M_PI 3.14159265358979323846 /* pi */
 #define LOG(msg, ...)                                                          \
   do {                                                                         \
     log(msg, ##__VA_ARGS__);                                                   \
@@ -77,18 +83,20 @@ private:
   SDL_Renderer *renderer;
   SDL_Window *window;
   SDL_GameController *controller;
+  TTF_Font *font;
 
   Vector2 shift;
   Vector2 momentum;
   float zoom;
   float zoom_momentum;
 
-  std::vector<Individual> individuals;
+  Board board;
 
   int initialize();
 
   void render_line(const Vector2 p1, const Vector2 p2);
   void render_individual(const Individual &individual);
+  void render_text(const char *string, Vector2 position, float scale = 1.0);
   void render();
   void tick(float time_delta);
   void process_events(float time_delta);
@@ -121,11 +129,15 @@ int App::initialize() {
     return -1;
   }
 
+  TTF_Init();
+  font = TTF_OpenFont("resources/PublicPixel.ttf", 25);
+
   for (int i = 0; i < 15; i++) {
-    individuals.emplace_back(1.0,
-                             Vector2(randf(-10.0, 10.0), randf(-10.0, 10.0)),
-                             randf(0.0, M_PI * 2.0));
-    individuals[individuals.size() - 1].clock_offset = randf(0.0, M_PI * 2.0);
+    board.individuals.emplace_back(
+        1.0, Vector2(randf(-10.0, 10.0), randf(-10.0, 10.0)),
+        randf(0.0, M_PI * 2.0));
+    board.individuals[board.individuals.size() - 1].clock_offset =
+        randf(0.0, M_PI * 2.0);
   }
   LOG("init done");
   return 0;
@@ -135,6 +147,18 @@ void App::render_line(const Vector2 p1, const Vector2 p2) {
   Vector2 p1t = p1 * zoom + shift;
   Vector2 p2t = p2 * zoom + shift;
   SDL_RenderDrawLineF(renderer, p1t.x, p1t.y, p2t.x, p2t.y);
+}
+
+void App::render_text(const char *string, Vector2 position, float scale) {
+  auto surface = TTF_RenderText_Solid(font, string, {255, 255, 255, 255});
+  auto texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+  SDL_FRect rect{position.x, position.y, static_cast<float>(surface->w) * scale,
+                 static_cast<float>(surface->h) * scale};
+  SDL_RenderCopyF(renderer, texture, NULL, &rect);
+
+  SDL_DestroyTexture(texture);
+  SDL_FreeSurface(surface);
 }
 
 void App::render_individual(const Individual &individual) {
@@ -153,6 +177,12 @@ void App::render_individual(const Individual &individual) {
   render_line(forward, left);
   render_line(forward, right);
   render_line(left, right);
+
+  char buff[64];
+  sprintf(buff, "%f",
+          angle_difference(individual.orientation,
+                           individual.position.angle() + M_PI));
+  render_text(buff, individual.position * zoom + shift, 0.5);
 }
 
 void App::render() {
@@ -160,24 +190,13 @@ void App::render() {
   SDL_RenderClear(renderer);
 
   SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-  for (auto &individual : individuals) {
+  for (auto &individual : board.individuals) {
     render_individual(individual);
   }
   SDL_RenderPresent(renderer);
 }
 
-void App::tick(float time_delta) {
-  for (auto &individual : individuals) {
-    float speed =
-        (1.0 + std::sin(individual.clock_offset +
-                        static_cast<float>(SDL_GetPerformanceCounter()) /
-                            SDL_GetPerformanceFrequency()));
-    individual.orientation += time_delta * 3.14 / 2.0;
-    individual.position =
-        individual.position +
-        Vector2::from_polar(individual.orientation, speed * time_delta);
-  }
-}
+void App::tick(float time_delta) { board.tick(time_delta); }
 
 void App::process_events(float time_delta) {
   SDL_Event event;
@@ -207,7 +226,7 @@ int App::run() {
   if (result) {
     return result;
   }
-  for (auto &individual : individuals) {
+  for (auto &individual : board.individuals) {
     LOG("%f", individual.clock_offset);
   }
   LOG("Number of Joysticks: %d", SDL_NumJoysticks());
@@ -221,7 +240,7 @@ int App::run() {
 
     float time_delta =
         static_cast<float>(milliseconds_passed) / SDL_GetPerformanceFrequency();
-    // LOG("FPS: %f", 1.0 / time_delta);
+    LOG("FPS: %f", 1.0 / time_delta);
 
     process_events(time_delta);
     tick(time_delta);
@@ -231,6 +250,7 @@ int App::run() {
 
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
+  TTF_Quit();
 
   SDL_Quit();
   sceKernelExitProcess(0);
