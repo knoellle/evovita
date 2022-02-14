@@ -24,6 +24,8 @@ include_directories(
 
 add_executable(${PROJECT_NAME}
   src/main.cpp
+  src/vector.cpp
+  src/individual.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
