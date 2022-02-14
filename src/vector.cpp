@@ -21,3 +21,7 @@ Vector2 Vector2::operator-(const Vector2 &rhs) const {
 Vector2 Vector2::operator*(const float &rhs) const {
   return Vector2(this->x * rhs, this->y * rhs);
 };
+
+Vector2 Vector2::operator/(const float &rhs) const {
+  return Vector2(this->x / rhs, this->y / rhs);
+};

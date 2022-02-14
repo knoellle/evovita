@@ -1,3 +1,5 @@
+#include <SDL2/SDL_gamecontroller.h>
+#include <SDL2/SDL_joystick.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_timer.h>
 #include <cmath>
@@ -74,8 +76,12 @@ class App {
 private:
   SDL_Renderer *renderer;
   SDL_Window *window;
+  SDL_GameController *controller;
+
   Vector2 shift;
+  Vector2 momentum;
   float zoom;
+  float zoom_momentum;
 
   std::vector<Individual> individuals;
 
@@ -85,17 +91,20 @@ private:
   void render_individual(const Individual &individual);
   void render();
   void tick(float time_delta);
+  void process_events(float time_delta);
 
 public:
   App();
   int run();
 };
 
-App::App() : shift{480.0f, 277.0f}, zoom{20.0f} {};
+App::App()
+    : shift{480.0f, 277.0f}, momentum{0.0, 0.0}, zoom{20.0f}, zoom_momentum{
+                                                                  0.0} {};
 
 int App::initialize() {
   start_debug_log();
-  if (SDL_Init(SDL_INIT_VIDEO) < 0)
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0)
     return -1;
 
   if ((window = SDL_CreateWindow("Evovita", SDL_WINDOWPOS_UNDEFINED,
@@ -105,6 +114,12 @@ int App::initialize() {
 
   if ((renderer = SDL_CreateRenderer(window, -1, 0)) == NULL)
     return -1;
+
+  controller = SDL_GameControllerOpen(0);
+  if (!controller) {
+    LOG("Error opening controller: %s", SDL_GetError());
+    return -1;
+  }
 
   for (int i = 0; i < 15; i++) {
     individuals.emplace_back(1.0,
@@ -164,6 +179,29 @@ void App::tick(float time_delta) {
   }
 }
 
+void App::process_events(float time_delta) {
+  SDL_Event event;
+  while (SDL_PollEvent(&event)) {
+    LOG("Event: %d", event.type);
+  }
+  Vector2 left_stick{
+      SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX) /
+          32767.0,
+      SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY) /
+          32767.0};
+  Vector2 right_stick{
+      SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX) /
+          32767.0,
+      SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY) /
+          32767.0};
+  momentum = momentum / (1.0 + time_delta * 10.0);
+  momentum = momentum + left_stick * time_delta;
+  shift = shift - momentum * time_delta * 5000.0;
+  LOG("Left: %f %f", left_stick.x, left_stick.y);
+  LOG("Momentum: %f %f", momentum.x, momentum.y);
+  LOG("Shift: %f %f", shift.x, shift.y);
+}
+
 int App::run() {
   int result = initialize();
   if (result) {
@@ -172,6 +210,7 @@ int App::run() {
   for (auto &individual : individuals) {
     LOG("%f", individual.clock_offset);
   }
+  LOG("Number of Joysticks: %d", SDL_NumJoysticks());
 
   uint64_t last_update = SDL_GetPerformanceCounter();
 
@@ -182,8 +221,9 @@ int App::run() {
 
     float time_delta =
         static_cast<float>(milliseconds_passed) / SDL_GetPerformanceFrequency();
-    LOG("FPS: %f", 1.0 / time_delta);
+    // LOG("FPS: %f", 1.0 / time_delta);
 
+    process_events(time_delta);
     tick(time_delta);
     render();
     // SDL_Delay(40);
