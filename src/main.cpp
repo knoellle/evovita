@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
+#include <math.h>
 
 #include <SDL2/SDL.h>
 #include <psp2/appmgr.h>
@@ -15,6 +16,7 @@
 #include "individual.hpp"
 #include "vector.hpp"
 
+# define M_PI		3.14159265358979323846	/* pi */
 #define LOG(msg, ...)                                                          \
   do {                                                                         \
     log(msg, ##__VA_ARGS__);                                                   \
@@ -109,10 +111,18 @@ void App::render_line(const Vector2 p1, const Vector2 p2) {
 
 void App::render_individual(const Individual &individual) {
   float size = 100.0;
-  render_line(individual.position,
-              individual.position +
-                  Vector2(std::cos(individual.orientation) * size,
-                          std::sin(individual.orientation) * size));
+  Vector2 forward =
+      individual.position + Vector2(std::cos(individual.orientation) * size * 0.6,
+                                    std::sin(individual.orientation) * size * 0.6);
+  Vector2 left =
+      individual.position + Vector2(std::cos(individual.orientation + M_PI * 0.8) * size * 0.4,
+                                    std::sin(individual.orientation + M_PI * 0.8) * size * 0.4);
+  Vector2 right =
+      individual.position + Vector2(std::cos(individual.orientation - M_PI * 0.8) * size * 0.4,
+                                    std::sin(individual.orientation - M_PI * 0.8) * size * 0.4);
+  render_line(forward, left);
+  render_line(forward, right);
+  render_line(left, right);
 }
 
 void App::render() {
@@ -139,11 +149,12 @@ int App::run() {
     uint64_t milliseconds_passed = now - last_update;
     last_update = now;
 
-    float time_delta = static_cast<float>(milliseconds_passed) / SDL_GetPerformanceFrequency();
+    float time_delta =
+        static_cast<float>(milliseconds_passed) / SDL_GetPerformanceFrequency();
     LOG("FPS: %f", 1.0 / time_delta);
 
     render();
-    individuals[0].orientation += time_delta * 3.14 * 2.0;
+    individuals[0].orientation += time_delta * 3.14 / 2.0;
     // SDL_Delay(40);
   }
 
