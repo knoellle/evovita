@@ -60,6 +60,13 @@ void start_debug_log(void) {
   LOG("debug logging socket initialized");
 }
 
+float randf(float min, float max) {
+  float range = max - min;
+  return min +
+         (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX + 1u)) *
+             range;
+}
+
 // Screen dimension constants
 enum { SCREEN_WIDTH = 960, SCREEN_HEIGHT = 544 };
 
@@ -77,13 +84,14 @@ private:
   void render_line(const Vector2 p1, const Vector2 p2);
   void render_individual(const Individual &individual);
   void render();
+  void tick(float time_delta);
 
 public:
   App();
   int run();
 };
 
-App::App() : shift{480.0f, 277.0f}, zoom{1.0f} {};
+App::App() : shift{480.0f, 277.0f}, zoom{20.0f} {};
 
 int App::initialize() {
   start_debug_log();
@@ -98,19 +106,24 @@ int App::initialize() {
   if ((renderer = SDL_CreateRenderer(window, -1, 0)) == NULL)
     return -1;
 
-  individuals.emplace_back(1.0, Vector2(0.0, 0.0), 0.0);
+  for (int i = 0; i < 15; i++) {
+    individuals.emplace_back(1.0,
+                             Vector2(randf(-10.0, 10.0), randf(-10.0, 10.0)),
+                             randf(0.0, M_PI * 2.0));
+    individuals[individuals.size() - 1].clock_offset = randf(0.0, M_PI * 2.0);
+  }
   LOG("init done");
   return 0;
 }
 
 void App::render_line(const Vector2 p1, const Vector2 p2) {
-  Vector2 p1t = p1 + shift;
-  Vector2 p2t = p2 + shift;
+  Vector2 p1t = p1 * zoom + shift;
+  Vector2 p2t = p2 * zoom + shift;
   SDL_RenderDrawLineF(renderer, p1t.x, p1t.y, p2t.x, p2t.y);
 }
 
 void App::render_individual(const Individual &individual) {
-  float size = 100.0;
+  float size = 1.0;
   Vector2 forward = individual.position +
                     Vector2(std::cos(individual.orientation) * size * 0.6,
                             std::sin(individual.orientation) * size * 0.6);
@@ -138,10 +151,26 @@ void App::render() {
   SDL_RenderPresent(renderer);
 }
 
+void App::tick(float time_delta) {
+  for (auto &individual : individuals) {
+    float speed =
+        (1.0 + std::sin(individual.clock_offset +
+                        static_cast<float>(SDL_GetPerformanceCounter()) /
+                            SDL_GetPerformanceFrequency()));
+    individual.orientation += time_delta * 3.14 / 2.0;
+    individual.position =
+        individual.position +
+        Vector2::from_polar(individual.orientation, speed * time_delta);
+  }
+}
+
 int App::run() {
   int result = initialize();
   if (result) {
     return result;
+  }
+  for (auto &individual : individuals) {
+    LOG("%f", individual.clock_offset);
   }
 
   uint64_t last_update = SDL_GetPerformanceCounter();
@@ -155,8 +184,8 @@ int App::run() {
         static_cast<float>(milliseconds_passed) / SDL_GetPerformanceFrequency();
     LOG("FPS: %f", 1.0 / time_delta);
 
+    tick(time_delta);
     render();
-    individuals[0].orientation += time_delta * 3.14 / 2.0;
     // SDL_Delay(40);
   }
 
