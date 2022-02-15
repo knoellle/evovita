@@ -1,3 +1,4 @@
+#include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_ttf.h>
 #include <cmath>
@@ -96,6 +97,7 @@ private:
 
   void render_line(const Vector2 p1, const Vector2 p2);
   void render_individual(const Individual &individual);
+  void render_food(const Vector2 &food);
   void render_text(const char *string, Vector2 position, float scale = 1.0);
   void render();
   void tick(float time_delta);
@@ -138,6 +140,9 @@ int App::initialize() {
         randf(0.0, M_PI * 2.0));
     board.individuals[board.individuals.size() - 1].clock_offset =
         randf(0.0, M_PI * 2.0);
+  }
+  for (int i = 0; i < 150; i++) {
+    board.food.emplace_back(randf(-10.0, 10.0), randf(-10.0, 10.0));
   }
   LOG("init done");
   return 0;
@@ -185,6 +190,13 @@ void App::render_individual(const Individual &individual) {
   render_text(buff, individual.position * zoom + shift, 0.5);
 }
 
+void App::render_food(const Vector2 &food) {
+  Vector2 mapped = food * zoom + shift;
+  float size = 2;
+  SDL_FRect rect{mapped.x - size / 0.5, mapped.y - size / 0.5, size, size};
+  SDL_RenderDrawRectF(renderer, &rect);
+};
+
 void App::render() {
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   SDL_RenderClear(renderer);
@@ -192,6 +204,9 @@ void App::render() {
   SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
   for (auto &individual : board.individuals) {
     render_individual(individual);
+  }
+  for (auto &food : board.food) {
+    render_food(food);
   }
 
   Vector2 vpoints[] = {{-25.0, -25.0},
