@@ -55,3 +55,4 @@ float Vector2::norm() const { return std::sqrt(x * x + y * y); };
 float Vector2::norm_squared() const { return x * x + y * y; };
 
 float Vector2::angle() const { return std::atan2(y, x); };
+SDL_FPoint Vector2::as_point() const { return SDL_FPoint{x, y}; };

@@ -193,6 +193,18 @@ void App::render() {
   for (auto &individual : board.individuals) {
     render_individual(individual);
   }
+
+  Vector2 vpoints[] = {{-25.0, -25.0},
+                       {-25.0, 25.0},
+                       {25.0, 25.0},
+                       {25.0, -25.0},
+                       {-25.0, -25.0}};
+  SDL_FPoint points[5];
+  for (int i = 0; i < 5; i++) {
+    points[i] = (vpoints[i] * zoom + shift).as_point();
+  }
+  SDL_RenderDrawLinesF(renderer, points, 5);
+
   SDL_RenderPresent(renderer);
 }
 
