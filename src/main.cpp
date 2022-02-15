@@ -228,9 +228,14 @@ void App::process_events(float time_delta) {
   momentum = momentum / (1.0 + time_delta * 10.0);
   momentum = momentum + left_stick * time_delta;
   shift = shift - momentum * time_delta * 5000.0;
+  zoom_momentum = zoom_momentum / (1.0 + time_delta * 10.0);
+  zoom_momentum = zoom_momentum - right_stick.y * time_delta * 0.5;
+  zoom = zoom * (1.0 + zoom_momentum);
   LOG("Left: %f %f", left_stick.x, left_stick.y);
   LOG("Momentum: %f %f", momentum.x, momentum.y);
   LOG("Shift: %f %f", shift.x, shift.y);
+  LOG("Zoom Mom: %f", zoom_momentum);
+  LOG("Zoom: %f", zoom);
 }
 
 int App::run() {
