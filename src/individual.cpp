@@ -10,8 +10,8 @@ void Individual::process() {
   outputs[0] = 0;
   outputs[1] = 1.0;
   for (int i = 0; i < 10; i++) {
-    outputs[0] += inputs[i] * (static_cast<float>(i) - 4.5);
-    outputs[1] -= abs(inputs[i] * (static_cast<float>(i) - 4.5));
+    outputs[0] -= inputs[i] * (static_cast<float>(i) - 4.5);
+    outputs[1] += abs(inputs[i] * (static_cast<float>(i) - 4.5));
   }
   outputs[0] /= 10.0;
   outputs[1] /= 10.0;

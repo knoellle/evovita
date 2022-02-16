@@ -28,6 +28,7 @@ add_executable(${PROJECT_NAME}
   src/board.cpp
   src/individual.cpp
   src/vector.cpp
+  src/utils.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -36,6 +37,7 @@ target_link_libraries(${PROJECT_NAME}
   SDL2_image
   SDL2_mixer
   SDL2_ttf
+  SDL2_gfx
   SceAppMgr_stub
   SceAppUtil_stub
   SceAudio_stub

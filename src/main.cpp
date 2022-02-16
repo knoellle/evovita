@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <math.h>
 #include <vector>
 
@@ -17,64 +16,10 @@
 #include <psp2/appmgr.h>
 #include <psp2/kernel/clib.h>
 #include <psp2/kernel/processmgr.h>
-#include <psp2/net/net.h>
-#include <psp2/net/netctl.h>
-#include <psp2/sysmodule.h>
 
 #include "board.hpp"
 #include "individual.hpp"
-#include "utils.hpp"
 #include "vector.hpp"
-
-#define LOG(msg, ...)                                                          \
-  do {                                                                         \
-    log(msg, ##__VA_ARGS__);                                                   \
-  } while (0)
-#define LOGF(msg, ...)                                                         \
-  do {                                                                         \
-    log(fmt::format(msg, ##__VA_ARGS__).c_str());                              \
-  } while (0)
-static int g_log_socket;
-void log(const char *msg, ...) {
-  char buffer[512];
-
-  va_list args;
-  va_start(args, msg);
-  int len = vsnprintf(buffer, sizeof(buffer) - 1, msg, args);
-  va_end(args);
-  buffer[len] = '\n';
-
-  sceNetSend(g_log_socket, buffer, len + 1, 0);
-}
-void start_debug_log(void) {
-
-  sceSysmoduleLoadModule(SCE_SYSMODULE_NET);
-  static uint8_t netmem[1024 * 1024];
-  SceNetInitParam net = {
-      .memory = netmem,
-      .size = sizeof(netmem),
-      .flags = 0,
-  };
-
-  sceNetInit(&net);
-  g_log_socket = sceNetSocket("log_socket", SCE_NET_AF_INET, SCE_NET_SOCK_DGRAM,
-                              SCE_NET_IPPROTO_UDP);
-
-  SceNetSockaddrIn addr{};
-  addr.sin_family = SCE_NET_AF_INET;
-  addr.sin_port = sceNetHtons(30000);
-  sceNetInetPton(SCE_NET_AF_INET, "239.255.0.100", &addr.sin_addr);
-
-  sceNetConnect(g_log_socket, (SceNetSockaddr *)&addr, sizeof(addr));
-  LOG("debug logging socket initialized");
-}
-
-float randf(float min, float max) {
-  float range = max - min;
-  return min +
-         (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX + 1u)) *
-             range;
-}
 
 // Screen dimension constants
 enum { SCREEN_WIDTH = 960, SCREEN_HEIGHT = 544 };
@@ -142,7 +87,7 @@ int App::initialize() {
         randf(0.0, M_PI * 2.0);
   }
   for (int i = 0; i < 150; i++) {
-    board.food.emplace_back(randf(-10.0, 10.0), randf(-10.0, 10.0));
+    board.food.emplace_back(randf(-30.0, 30.0), randf(-30.0, 30.0));
   }
   LOG("init done");
   return 0;
@@ -179,14 +124,26 @@ void App::render_individual(const Individual &individual) {
       individual.position +
       Vector2(std::cos(individual.orientation - M_PI * 0.8) * size * 0.4,
               std::sin(individual.orientation - M_PI * 0.8) * size * 0.4);
+
+  SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
   render_line(forward, left);
   render_line(forward, right);
   render_line(left, right);
 
+  for (int i = 0; i < 10; i++) {
+    uint8_t intensity = std::round(individual.inputs[i] * 255.0);
+    SDL_SetRenderDrawColor(renderer, intensity, intensity, intensity, 255);
+
+    float a = (static_cast<float>(i) - 4.5) / 5.0 * M_PI * 0.25;
+    render_line(
+        individual.position,
+        individual.position +
+            Vector2(cos(individual.orientation + a) * board.view_range,
+                    sin(individual.orientation + a) * board.view_range));
+  }
+
   char buff[64];
-  sprintf(buff, "%f",
-          angle_difference(individual.orientation,
-                           individual.position.angle() + M_PI));
+  sprintf(buff, "%f", individual.life);
   render_text(buff, individual.position * zoom + shift, 0.5);
 }
 
@@ -205,6 +162,7 @@ void App::render() {
   for (auto &individual : board.individuals) {
     render_individual(individual);
   }
+  SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
   for (auto &food : board.food) {
     render_food(food);
   }
@@ -251,6 +209,8 @@ void App::process_events(float time_delta) {
   LOG("Shift: %f %f", shift.x, shift.y);
   LOG("Zoom Mom: %f", zoom_momentum);
   LOG("Zoom: %f", zoom);
+  // board.individuals[0].position += left_stick * time_delta;
+  // board.individuals[0].orientation += right_stick.x * time_delta;
 }
 
 int App::run() {
