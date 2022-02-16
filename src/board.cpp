@@ -51,5 +51,7 @@ void Board::tick(float time_delta) {
     individual.position += Vector2::from_polar(
         individual.orientation,
         clamp(individual.outputs[1] + 0.2, 0.0, 1.0) * time_delta * 10.0);
+    individual.position.x = fmod(individual.position.x, 25.0);
+    individual.position.y = fmod(individual.position.y, 25.0);
   }
 }
