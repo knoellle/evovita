@@ -87,7 +87,7 @@ int App::initialize() {
         randf(0.0, M_PI * 2.0);
   }
   for (int i = 0; i < 150; i++) {
-    board.food.emplace_back(randf(-30.0, 30.0), randf(-30.0, 30.0));
+    board.food.emplace_back(randf(-25.0, 25.0), randf(-25.0, 25.0));
   }
   LOG("init done");
   return 0;
